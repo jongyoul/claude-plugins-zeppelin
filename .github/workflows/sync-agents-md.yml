@@ -5,9 +5,15 @@ on:
     - cron: '0 */6 * * *'  # Every 6 hours
   workflow_dispatch:
 
+permissions:
+  contents: write
+  issues: write
+
 jobs:
-  sync:
+  detect:
     runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.check.outputs.changed }}
     steps:
       - uses: actions/checkout@v4
 
@@ -33,18 +39,66 @@ jobs:
             echo "changed=true" >> $GITHUB_OUTPUT
           fi
 
-      - name: Update cached AGENTS.md
+      - name: Save updated AGENTS.md.current
         if: steps.check.outputs.changed == 'true'
-        run: cp AGENTS.md.upstream AGENTS.md.current
+        run: |
+          cp AGENTS.md.upstream AGENTS.md.current
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add AGENTS.md.current
+          git commit -m "Update AGENTS.md.current from upstream"
+          git push
 
-      - name: Create PR if changed
-        if: steps.check.outputs.changed == 'true'
-        uses: peter-evans/create-pull-request@v6
+  update-plugin:
+    needs: detect
+    if: needs.detect.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
         with:
-          commit-message: "Update AGENTS.md from upstream apache/zeppelin"
-          title: "Sync AGENTS.md from apache/zeppelin"
-          body: |
-            AGENTS.md has been updated in apache/zeppelin master.
-            Please review and update the plugin skills/agents accordingly.
-          branch: sync-agents-md
-          base: main
+          ref: main
+
+      - name: Create issue for Copilot
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue create \
+            --title "Sync: Update skills/agents from AGENTS.md changes" \
+            --body "$(cat <<'EOF'
+          ## Context
+
+          AGENTS.md in apache/zeppelin has been updated.
+          The latest version is saved in AGENTS.md.current in this repo.
+
+          ## Task
+
+          Please update the plugin files based on the changes in AGENTS.md.current:
+
+          1. Read AGENTS.md.current
+          2. Update the following files to reflect the changes:
+             - zeppelin-dev/skills/build/SKILL.md — Build & test section
+             - zeppelin-dev/skills/contribute/SKILL.md — Contributing guide section
+             - zeppelin-dev/skills/frontend/SKILL.md — Frontend development section
+             - zeppelin-dev/agents/architecture-guide.md — Architecture sections
+             - zeppelin-dev/agents/code-reviewer.md — Code style and review conventions
+          3. Keep each file focused on its topic, don't duplicate content across files
+          4. Keep SKILL.md frontmatter (name, description, tools) intact, only update the body
+
+          ## Notes
+
+          - Do NOT modify plugin.json or update-claude-md/SKILL.md
+          - Preserve the existing file structure
+          EOF
+          )" \
+            --assignee "copilot"
+
+  auto-merge:
+    runs-on: ubuntu-latest
+    if: always()
+    needs: update-plugin
+    steps:
+      - name: Note
+        run: echo "Copilot will create a PR. See auto-merge workflow for automatic merging."
