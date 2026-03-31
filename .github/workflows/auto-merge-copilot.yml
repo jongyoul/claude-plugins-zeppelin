@@ -13,7 +13,41 @@ jobs:
     runs-on: ubuntu-latest
     if: github.actor == 'copilot' || github.actor == 'github-copilot[bot]'
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check diff size
+        id: diff
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          CHANGED_FILES=$(gh pr diff "${{ github.event.pull_request.number }}" --name-only)
+          LINES_CHANGED=$(gh pr diff "${{ github.event.pull_request.number }}" | wc -l)
+
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+          echo "Total diff lines: $LINES_CHANGED"
+
+          # Block if non-plugin files are modified
+          FORBIDDEN=$(echo "$CHANGED_FILES" | grep -v '^zeppelin-dev/' || true)
+          if [ -n "$FORBIDDEN" ]; then
+            echo "::error::Copilot modified files outside zeppelin-dev/: $FORBIDDEN"
+            echo "safe=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Block if diff is too large (over 500 lines)
+          if [ "$LINES_CHANGED" -gt 500 ]; then
+            echo "::error::Diff too large ($LINES_CHANGED lines). Needs manual review."
+            echo "safe=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "safe=true" >> $GITHUB_OUTPUT
+
       - name: Enable auto-merge
+        if: steps.diff.outputs.safe == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -21,3 +55,11 @@ jobs:
             --repo "${{ github.repository }}" \
             --squash \
             --auto
+
+      - name: Request manual review
+        if: steps.diff.outputs.safe == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr comment "${{ github.event.pull_request.number }}" \
+            --body "Auto-merge blocked: diff is too large or modifies files outside zeppelin-dev/. Manual review required."
