@@ -3,31 +3,33 @@ name: Auto-merge Copilot PRs
 on:
   pull_request:
     types: [opened, synchronize]
+  pull_request_review:
+    types: [submitted]
 
 permissions:
   contents: write
   pull-requests: write
 
 jobs:
-  auto-merge:
+  validate:
     runs-on: ubuntu-latest
     if: github.actor == 'copilot' || github.actor == 'github-copilot[bot]'
+    outputs:
+      safe: ${{ steps.diff.outputs.safe }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Check diff size
+      - name: Check diff safety
         id: diff
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           CHANGED_FILES=$(gh pr diff "${{ github.event.pull_request.number }}" --name-only)
-          LINES_CHANGED=$(gh pr diff "${{ github.event.pull_request.number }}" | wc -l)
 
           echo "Changed files:"
           echo "$CHANGED_FILES"
-          echo "Total diff lines: $LINES_CHANGED"
 
           # Block if non-plugin files are modified
           FORBIDDEN=$(echo "$CHANGED_FILES" | grep -v '^zeppelin-dev/' || true)
@@ -37,17 +39,45 @@ jobs:
             exit 0
           fi
 
-          # Block if diff is too large (over 500 lines)
-          if [ "$LINES_CHANGED" -gt 500 ]; then
-            echo "::error::Diff too large ($LINES_CHANGED lines). Needs manual review."
-            echo "safe=false" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-
           echo "safe=true" >> $GITHUB_OUTPUT
 
-      - name: Enable auto-merge
-        if: steps.diff.outputs.safe == 'true'
+  auto-merge:
+    needs: validate
+    if: needs.validate.outputs.safe == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for Copilot code review
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Waiting for Copilot code review to complete..."
+          for i in $(seq 1 30); do
+            REVIEWS=$(gh pr reviews "${{ github.event.pull_request.number }}" \
+              --repo "${{ github.repository }}" \
+              --json author,state \
+              --jq '.[] | select(.author.login == "copilot" or .author.login == "github-copilot[bot]") | .state' 2>/dev/null || true)
+
+            if echo "$REVIEWS" | grep -q "APPROVED"; then
+              echo "Copilot code review approved!"
+              echo "reviewed=true" >> $GITHUB_ENV
+              break
+            elif echo "$REVIEWS" | grep -q "CHANGES_REQUESTED"; then
+              echo "Copilot code review requested changes. Skipping auto-merge."
+              echo "reviewed=rejected" >> $GITHUB_ENV
+              break
+            fi
+
+            echo "Review not found yet, waiting... ($i/30)"
+            sleep 20
+          done
+
+          if [ -z "$reviewed" ]; then
+            echo "Timed out waiting for review. Proceeding with auto-merge."
+            echo "reviewed=timeout" >> $GITHUB_ENV
+          fi
+
+      - name: Enable auto-merge (squash)
+        if: env.reviewed != 'rejected'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -56,10 +86,14 @@ jobs:
             --squash \
             --auto
 
+  blocked:
+    needs: validate
+    if: needs.validate.outputs.safe == 'false'
+    runs-on: ubuntu-latest
+    steps:
       - name: Request manual review
-        if: steps.diff.outputs.safe == 'false'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh pr comment "${{ github.event.pull_request.number }}" \
-            --body "Auto-merge blocked: diff is too large or modifies files outside zeppelin-dev/. Manual review required."
+            --body "Auto-merge blocked: Copilot modified files outside zeppelin-dev/. Manual review required."

@@ -39,6 +39,18 @@ jobs:
             echo "changed=true" >> $GITHUB_OUTPUT
           fi
 
+      - name: Generate diff
+        if: steps.check.outputs.changed == 'true'
+        id: diff
+        run: |
+          if [ -f AGENTS.md.current ]; then
+            DIFF=$(diff -u AGENTS.md.current AGENTS.md.upstream || true)
+          else
+            DIFF="(New file — no previous version to compare)"
+          fi
+          # Save to file for the issue body
+          echo "$DIFF" > /tmp/agents-md-diff.txt
+
       - name: Save updated AGENTS.md.current
         if: steps.check.outputs.changed == 'true'
         run: |
@@ -49,56 +61,48 @@ jobs:
           git commit -m "Update AGENTS.md.current from upstream"
           git push
 
-  update-plugin:
-    needs: detect
-    if: needs.detect.outputs.changed == 'true'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      issues: write
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: main
-
       - name: Create issue for Copilot
+        if: steps.check.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          DIFF_CONTENT=$(cat /tmp/agents-md-diff.txt)
+
           gh issue create \
             --title "Sync: Update skills/agents from AGENTS.md changes" \
-            --body "$(cat <<'EOF'
+            --body "$(cat <<EOF
           ## Context
 
           AGENTS.md in apache/zeppelin has been updated.
-          The latest version is saved in AGENTS.md.current in this repo.
+          The latest version is saved in \`AGENTS.md.current\` in this repo.
+
+          ## AGENTS.md Diff
+
+          Only the following changes were made. Update plugin files to reflect **only these changes** — nothing more, nothing less.
+
+          \`\`\`diff
+          ${DIFF_CONTENT}
+          \`\`\`
 
           ## Task
 
-          Please update the plugin files based on the changes in AGENTS.md.current:
+          1. Read the diff above carefully
+          2. For each changed section, update the corresponding plugin file:
+             - Build & Test → \`zeppelin-dev/skills/build/SKILL.md\`
+             - Contributing Guide → \`zeppelin-dev/skills/contribute/SKILL.md\`
+             - Frontend → \`zeppelin-dev/skills/frontend/SKILL.md\`
+             - Module Architecture / Communication / Plugin System → \`zeppelin-dev/agents/architecture-guide.md\`
+             - Code Style / Review conventions → \`zeppelin-dev/agents/code-reviewer.md\`
+          3. If a section was not changed in the diff, do NOT touch the corresponding file
 
-          1. Read AGENTS.md.current
-          2. Update the following files to reflect the changes:
-             - zeppelin-dev/skills/build/SKILL.md — Build & test section
-             - zeppelin-dev/skills/contribute/SKILL.md — Contributing guide section
-             - zeppelin-dev/skills/frontend/SKILL.md — Frontend development section
-             - zeppelin-dev/agents/architecture-guide.md — Architecture sections
-             - zeppelin-dev/agents/code-reviewer.md — Code style and review conventions
-          3. Keep each file focused on its topic, don't duplicate content across files
-          4. Keep SKILL.md frontmatter (name, description, tools) intact, only update the body
+          ## PR Description
 
-          ## Notes
+          In the PR description, you MUST:
+          - List which AGENTS.md sections changed
+          - Map each change to the file you updated
+          - Explain why unchanged files were left alone
 
-          - Do NOT modify plugin.json or update-claude-md/SKILL.md
-          - Preserve the existing file structure
+          See \`.github/copilot-instructions.md\` for full rules.
           EOF
           )" \
             --assignee "copilot"
-
-  auto-merge:
-    runs-on: ubuntu-latest
-    if: always()
-    needs: update-plugin
-    steps:
-      - name: Note
-        run: echo "Copilot will create a PR. See auto-merge workflow for automatic merging."
