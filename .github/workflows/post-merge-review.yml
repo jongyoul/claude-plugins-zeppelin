@@ -1,0 +1,64 @@
+name: Post-merge review check
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  issues: write
+  pull-requests: read
+
+jobs:
+  check-review-comments:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.merged == true && (github.event.pull_request.user.login == 'copilot' || github.event.pull_request.user.login == 'github-copilot[bot]')
+    steps:
+      - name: Check for Copilot review comments
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          PR_TITLE="${{ github.event.pull_request.title }}"
+          PR_URL="${{ github.event.pull_request.html_url }}"
+
+          # Get review comments from Copilot code review
+          COMMENTS=$(gh api "repos/${{ github.repository }}/pulls/${PR_NUMBER}/comments" \
+            --jq '[.[] | select(.user.login == "copilot" or .user.login == "github-copilot[bot]" or .user.login == "github-actions[bot]") | {path: .path, body: .body}]' 2>/dev/null || echo "[]")
+
+          # Also check PR review comments
+          REVIEW_COMMENTS=$(gh api "repos/${{ github.repository }}/pulls/${PR_NUMBER}/reviews" \
+            --jq '[.[] | select(.user.login == "copilot" or .user.login == "github-copilot[bot]") | select(.body != "") | {body: .body}]' 2>/dev/null || echo "[]")
+
+          COMMENT_COUNT=$(echo "$COMMENTS" | jq 'length')
+          REVIEW_COUNT=$(echo "$REVIEW_COMMENTS" | jq 'length')
+
+          TOTAL=$((COMMENT_COUNT + REVIEW_COUNT))
+
+          echo "Found $TOTAL review comments on PR #${PR_NUMBER}"
+
+          if [ "$TOTAL" -gt 0 ]; then
+            # Build issue body with all comments
+            ISSUE_BODY="## Review comments from merged PR\n\n"
+            ISSUE_BODY+="PR: ${PR_URL}\n\n"
+
+            if [ "$COMMENT_COUNT" -gt 0 ]; then
+              ISSUE_BODY+="### Inline comments\n\n"
+              ISSUE_BODY+=$(echo "$COMMENTS" | jq -r '.[] | "- **\(.path)**: \(.body)\n"')
+              ISSUE_BODY+="\n"
+            fi
+
+            if [ "$REVIEW_COUNT" -gt 0 ]; then
+              ISSUE_BODY+="### Review comments\n\n"
+              ISSUE_BODY+=$(echo "$REVIEW_COMMENTS" | jq -r '.[] | "- \(.body)\n"')
+            fi
+
+            gh issue create \
+              --repo "${{ github.repository }}" \
+              --title "Review: Potential issues in merged PR #${PR_NUMBER}" \
+              --body "$(echo -e "$ISSUE_BODY")" \
+              --label "review"
+
+            echo "Created review issue"
+          else
+            echo "No review comments found. All clean!"
+          fi
