@@ -1,0 +1,14 @@
+{
+  "name": "zeppelin-dev",
+  "version": "0.1.0",
+  "description": "Development tools for Apache Zeppelin: build guides, contribution workflow, frontend dev, and architecture reference",
+  "author": {
+    "name": "Jongyoul Lee"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jongyoul/claude-plugins-zeppelin.git"
+  },
+  "license": "Apache-2.0",
+  "keywords": ["zeppelin", "apache", "development", "build", "contribution"]
+}
