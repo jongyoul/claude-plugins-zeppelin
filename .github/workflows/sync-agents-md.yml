@@ -65,7 +65,7 @@ jobs:
       - name: Create issue for Copilot
         if: steps.check.outputs.changed == 'true'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.COPILOT_PAT }}
         run: |
           DIFF_CONTENT=$(cat /tmp/agents-md-diff.txt)
 
