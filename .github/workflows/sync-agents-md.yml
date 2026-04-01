@@ -110,5 +110,9 @@ jobs:
           ISSUE_NUMBER=$(cat /tmp/issue_url.txt | grep -o '[0-9]*$')
           echo "Created issue #${ISSUE_NUMBER}"
 
-          # Assign to Copilot coding agent
-          gh issue edit "${ISSUE_NUMBER}" --add-assignee "copilot-swe-agent[bot]"
+          # Assign to Copilot coding agent via REST API
+          curl -s -X POST \
+            -H "Authorization: token $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/issues/${ISSUE_NUMBER}/assignees" \
+            -d '{"assignees":["copilot-swe-agent[bot]"]}'
