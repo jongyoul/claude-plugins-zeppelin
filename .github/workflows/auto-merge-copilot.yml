@@ -1,26 +1,47 @@
 name: Auto-merge Copilot PRs
 
 on:
-  pull_request:
-    types: [ready_for_review]
+  workflow_run:
+    workflows: ["Copilot coding agent"]
+    types: [completed]
 
 permissions:
   contents: write
   pull-requests: write
 
 jobs:
-  validate:
+  auto-merge:
     runs-on: ubuntu-latest
-    if: github.actor == 'copilot' || github.actor == 'github-copilot[bot]'
-    outputs:
-      safe: ${{ steps.diff.outputs.safe }}
+    if: github.event.workflow_run.conclusion == 'success'
     steps:
+      - name: Find Copilot PR
+        id: find-pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH="${{ github.event.workflow_run.head_branch }}"
+          echo "Looking for PR from branch: $BRANCH"
+
+          PR_NUMBER=$(gh pr list --repo "${{ github.repository }}" \
+            --head "$BRANCH" --state open --json number --jq '.[0].number' 2>/dev/null || true)
+
+          if [ -z "$PR_NUMBER" ]; then
+            echo "No open PR found for branch $BRANCH"
+            echo "found=false" >> $GITHUB_OUTPUT
+          else
+            echo "Found PR #$PR_NUMBER"
+            echo "found=true" >> $GITHUB_OUTPUT
+            echo "number=$PR_NUMBER" >> $GITHUB_OUTPUT
+          fi
+
       - name: Check diff safety
+        if: steps.find-pr.outputs.found == 'true'
         id: diff
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          CHANGED_FILES=$(gh pr diff "${{ github.event.pull_request.number }}" --repo "${{ github.repository }}" --name-only)
+          PR_NUMBER="${{ steps.find-pr.outputs.number }}"
+          CHANGED_FILES=$(gh pr diff "$PR_NUMBER" --repo "${{ github.repository }}" --name-only)
           echo "Changed files:"
           echo "$CHANGED_FILES"
 
@@ -28,33 +49,32 @@ jobs:
           if [ -n "$FORBIDDEN" ]; then
             echo "::error::Copilot modified files outside zeppelin-dev/: $FORBIDDEN"
             echo "safe=false" >> $GITHUB_OUTPUT
-            exit 0
+          else
+            echo "safe=true" >> $GITHUB_OUTPUT
           fi
 
-          echo "safe=true" >> $GITHUB_OUTPUT
-
-  auto-merge:
-    needs: validate
-    if: needs.validate.outputs.safe == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Enable auto-merge (squash)
+      - name: Mark PR as ready
+        if: steps.find-pr.outputs.found == 'true' && steps.diff.outputs.safe == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh pr merge "${{ github.event.pull_request.number }}" \
+          gh pr ready "${{ steps.find-pr.outputs.number }}" \
+            --repo "${{ github.repository }}" 2>/dev/null || true
+
+      - name: Squash merge
+        if: steps.find-pr.outputs.found == 'true' && steps.diff.outputs.safe == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr merge "${{ steps.find-pr.outputs.number }}" \
             --repo "${{ github.repository }}" \
-            --squash \
-            --auto
+            --squash
 
-  blocked:
-    needs: validate
-    if: needs.validate.outputs.safe == 'false'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Request manual review
+      - name: Comment if blocked
+        if: steps.find-pr.outputs.found == 'true' && steps.diff.outputs.safe == 'false'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh pr comment "${{ github.event.pull_request.number }}" \
+          gh pr comment "${{ steps.find-pr.outputs.number }}" \
+            --repo "${{ github.repository }}" \
             --body "Auto-merge blocked: Copilot modified files outside zeppelin-dev/. Manual review required."
