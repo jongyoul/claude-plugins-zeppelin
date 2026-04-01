@@ -76,6 +76,83 @@ Uses maven-shade-plugin to package `zeppelin-interpreter` + dependencies into an
 ### zeppelin-client
 REST/WebSocket client library for programmatic access to Zeppelin.
 
+## Interpreter Modules
+
+Each interpreter is an independent Maven module inheriting from `zeppelin-interpreter-parent`:
+
+| Module | Description |
+|--------|-------------|
+| `spark/` | Apache Spark (Scala/Python/R/SQL) — most complex interpreter |
+| `python/` | IPython/Python |
+| `flink/` | Apache Flink (Scala/Python/SQL) |
+| `jdbc/` | JDBC (PostgreSQL, MySQL, Hive, etc.) |
+| `shell/` | Bash/Shell commands |
+| `markdown/` | Markdown rendering (Flexmark) |
+| `java/` | Java interpreter |
+| `groovy/` | Groovy |
+| `neo4j/` | Neo4j Cypher |
+| `mongodb/` | MongoDB |
+| `elasticsearch/` | Elasticsearch |
+| `bigquery/` | Google BigQuery |
+| `cassandra/` | Apache Cassandra CQL |
+| `hbase/` | Apache HBase |
+| `rlang/` | R language |
+| `livy/` | Apache Livy (remote Spark) |
+| `sparql/` | SPARQL queries |
+| `influxdb/` | InfluxDB |
+| `file/` | HDFS/local file browser |
+| `alluxio/` | Alluxio file system |
+
+## Plugin Modules (`zeppelin-plugins/`)
+
+**Launcher plugins** (`launcher/`) — how interpreter processes are started:
+- `StandardInterpreterLauncher` (builtin) — local JVM process via `bin/interpreter.sh`
+- `SparkInterpreterLauncher` (builtin) — Spark-specific launcher with `spark-submit`
+- `DockerInterpreterLauncher` — Docker container
+- `K8sStandardInterpreterLauncher` — Kubernetes pod
+- `YarnInterpreterLauncher` — YARN container
+- `FlinkInterpreterLauncher` — Flink-specific
+- `ClusterInterpreterLauncher` — Zeppelin cluster mode
+
+**NotebookRepo plugins** (`notebookrepo/`) — where notebooks are persisted:
+- `VFSNotebookRepo` (builtin) — local filesystem (Apache VFS)
+- `GitNotebookRepo` (builtin) — local git repo
+- `GitHubNotebookRepo` — GitHub
+- `S3NotebookRepo` — Amazon S3
+- `GCSNotebookRepo` — Google Cloud Storage
+- `AzureNotebookRepo` — Azure Blob Storage
+- `MongoNotebookRepo` — MongoDB
+- `OSSNotebookRepo` — Alibaba Cloud OSS
+
+## Configuration Files
+
+| File | Purpose |
+|------|---------|
+| `conf/zeppelin-site.xml` | Main server config (port, SSL, notebook storage, interpreter settings). Copy from `.template` |
+| `conf/zeppelin-env.sh` | Shell environment (JAVA_OPTS, memory, Spark master). Copy from `.template` |
+| `conf/shiro.ini` | Authentication/authorization (users, roles, LDAP, Kerberos, PAM). Copy from `.template` |
+| `conf/interpreter.json` | Runtime interpreter settings — **auto-generated**, do not edit manually |
+| `conf/log4j2.properties` | Logging configuration |
+| `conf/interpreter-list` | Static list of available interpreters with Maven coordinates |
+| `{interpreter}/resources/interpreter-setting.json` | Interpreter defaults (build-time, bundled in JAR) |
+
+`conf/*.template` files are the source of truth. Actual config files (`zeppelin-site.xml`, `shiro.ini`, etc.) are `.gitignored`.
+
+## Module Boundaries
+
+Where new code should go:
+
+| If the code... | Put it in |
+|----------------|-----------|
+| Is a base interface/class that all interpreters need | `zeppelin-interpreter` |
+| Handles notebook state, interpreter lifecycle, scheduling, search | `zeppelin-zengine` |
+| Is a REST endpoint, WebSocket handler, or authentication realm | `zeppelin-server` |
+| Is specific to one backend (Spark, Flink, JDBC, etc.) | That interpreter's module |
+| Is a new way to launch interpreter processes | `zeppelin-plugins/launcher/` |
+| Is a new notebook storage backend | `zeppelin-plugins/notebookrepo/` |
+
+**Important**: Code added to `zeppelin-interpreter` is exposed to **every interpreter process** via the shaded JAR. Only add code there if all interpreters genuinely need it.
+
 ## Server–Interpreter Communication
 
 Zeppelin's most important architectural concept: the server and each interpreter run in **separate JVM processes** communicating via **Apache Thrift RPC**. This provides isolation, fault tolerance, and the ability to run interpreters on remote hosts or containers.
