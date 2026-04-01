@@ -17,7 +17,7 @@ tools:
 | Tool | Version | Notes |
 |------|---------|-------|
 | JDK | 11 | Required. Not 8, not 17 |
-| Maven | 3.6.3+ | Use the wrapper `./mvnw` |
+| Maven | 3.6.3+ | Use the wrapper `./mvnw` — no separate install needed |
 | Node.js | 18.x | Only for frontend (`zeppelin-web-angular/`) |
 
 ## Initial Setup
