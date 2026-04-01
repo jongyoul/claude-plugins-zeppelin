@@ -39,8 +39,12 @@ The most common build mistake: modifying `zeppelin-interpreter` without rebuildi
 
 ```bash
 # After changing zeppelin-interpreter, ALWAYS rebuild in order:
-./mvnw clean package -pl zeppelin-interpreter,zeppelin-interpreter-shaded -DskipTests
+./mvnw clean package -pl zeppelin-interpreter -DskipTests
+./mvnw clean package -pl zeppelin-interpreter-shaded -DskipTests
 # Then rebuild affected interpreter modules
+
+# Shorthand:
+./mvnw clean package -pl zeppelin-interpreter,zeppelin-interpreter-shaded -DskipTests
 ```
 
 The shaded JAR is also copied to `interpreter/` directory by maven-antrun-plugin after packaging. If this directory has a stale JAR, interpreter processes will load old code.

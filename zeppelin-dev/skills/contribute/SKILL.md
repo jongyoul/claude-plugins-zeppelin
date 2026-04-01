@@ -20,9 +20,47 @@ tools:
 | Maven | 3.6.3+ | Use the wrapper `./mvnw` |
 | Node.js | 18.x | Only for frontend (`zeppelin-web-angular/`) |
 
+## Initial Setup
+
+```bash
+# Clone the repository
+git clone https://github.com/apache/zeppelin.git
+cd zeppelin
+
+# First build — skip tests to verify environment works
+./mvnw clean package -DskipTests
+# This takes ~10 minutes. If it succeeds, your environment is ready.
+
+# Frontend setup (only if working on UI)
+cd zeppelin-web-angular
+npm install
+cd ..
+```
+
+## Development Workflow
+
+```bash
+# Build only the module you're changing
+./mvnw clean package -pl zeppelin-server -DskipTests
+
+# Run tests for your module
+./mvnw test -pl zeppelin-server
+
+# Run a specific test
+./mvnw test -pl zeppelin-server -Dtest=NotebookServerTest#testMethod
+
+# Start the dev frontend (proxies API to localhost:8080)
+cd zeppelin-web-angular && npm start
+```
+
+For Spark or Flink work, add the version profile:
+```bash
+./mvnw clean package -pl spark -Pspark-3.5 -Pspark-scala-2.12 -DskipTests
+```
+
 ## Before Submitting a PR
 
-1. **Write unit tests**. Every code change must include corresponding unit tests. Bug fixes should include a test that reproduces the bug.
+1. **Write unit tests**. Every code change must include corresponding unit tests. Bug fixes should include a test that reproduces the bug. New features should have tests covering the main paths.
 
 2. **Run tests for affected modules**:
    ```bash
@@ -67,8 +105,11 @@ public class NotebookRestApi extends AbstractRestApi {
     @Path("/{noteId}")
     @ZeppelinApi
     public Response getNote(@PathParam("noteId") String noteId) {
+        // Authorization check
         checkIfUserCanRead(noteId, "Insufficient privileges");
+        // Business logic via service layer
         Note note = notebook.getNote(noteId);
+        // Return JsonResponse
         return new JsonResponse<>(Status.OK, "", note).build();
     }
 }
