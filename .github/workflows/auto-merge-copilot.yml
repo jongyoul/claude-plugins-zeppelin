@@ -38,6 +38,13 @@ jobs:
     if: needs.validate.outputs.safe == 'true'
     runs-on: ubuntu-latest
     steps:
+      - name: Mark PR as ready if draft
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr ready "${{ github.event.pull_request.number }}" \
+            --repo "${{ github.repository }}" 2>/dev/null || true
+
       - name: Enable auto-merge (squash)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
