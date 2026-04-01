@@ -2,7 +2,7 @@ name: Auto-merge Copilot PRs
 
 on:
   pull_request:
-    types: [opened, synchronize]
+    types: [opened, synchronize, ready_for_review]
 
 permissions:
   contents: write
