@@ -8,6 +8,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  issues: write
 
 jobs:
   auto-merge:
@@ -69,6 +70,20 @@ jobs:
           gh pr merge "${{ steps.find-pr.outputs.number }}" \
             --repo "${{ github.repository }}" \
             --squash
+
+      - name: Close linked issues
+        if: steps.find-pr.outputs.found == 'true' && steps.diff.outputs.safe == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Extract issue numbers from PR body (Closes #N)
+          PR_BODY=$(gh pr view "${{ steps.find-pr.outputs.number }}" --repo "${{ github.repository }}" --json body --jq '.body')
+          ISSUE_NUMBERS=$(echo "$PR_BODY" | grep -oiE '(closes|fixes|resolves) #[0-9]+' | grep -oE '[0-9]+')
+
+          for ISSUE in $ISSUE_NUMBERS; do
+            echo "Closing issue #$ISSUE"
+            gh issue close "$ISSUE" --repo "${{ github.repository }}" 2>/dev/null || true
+          done
 
       - name: Comment if blocked
         if: steps.find-pr.outputs.found == 'true' && steps.diff.outputs.safe == 'false'
