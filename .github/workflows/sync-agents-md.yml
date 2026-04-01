@@ -105,5 +105,10 @@ jobs:
 
           See \`.github/copilot-instructions.md\` for full rules.
           EOF
-          )" \
-            --assignee "copilot"
+          )" > /tmp/issue_url.txt
+
+          ISSUE_NUMBER=$(cat /tmp/issue_url.txt | grep -o '[0-9]*$')
+          echo "Created issue #${ISSUE_NUMBER}"
+
+          # Assign to Copilot coding agent
+          gh issue edit "${ISSUE_NUMBER}" --add-assignee "copilot-swe-agent[bot]"
