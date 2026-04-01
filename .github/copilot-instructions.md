@@ -4,6 +4,7 @@
 
 ### Rules
 
+- **Your PR description MUST start with `Closes #N` where N is the issue number you are working on. This is mandatory — the issue must be auto-closed when the PR is merged.**
 - Only modify files under `zeppelin-dev/skills/` and `zeppelin-dev/agents/`
 - Do NOT modify `.claude-plugin/plugin.json`, `README.md`, `.github/`, or `.gitignore`
 - Do NOT create new files — only update existing files

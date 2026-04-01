@@ -96,9 +96,11 @@ jobs:
              - Code Style / Review conventions → \`zeppelin-dev/agents/code-reviewer.md\`
           3. If a section was not changed in the diff, do NOT touch the corresponding file
 
-          ## PR Description
+          ## PR Requirements
 
-          In the PR description, you MUST:
+          **CRITICAL**: Your PR description MUST start with \`Closes #ISSUE_NUMBER\` (the issue number will be provided after creation).
+
+          In the PR description, you MUST also:
           - List which AGENTS.md sections changed
           - Map each change to the file you updated
           - Explain why unchanged files were left alone
@@ -109,6 +111,11 @@ jobs:
 
           ISSUE_NUMBER=$(cat /tmp/issue_url.txt | grep -o '[0-9]*$')
           echo "Created issue #${ISSUE_NUMBER}"
+
+          # Add comment with issue number so Copilot knows to close it
+          gh issue comment "${ISSUE_NUMBER}" \
+            --repo "${{ github.repository }}" \
+            --body "This is issue #${ISSUE_NUMBER}. Your PR description MUST start with: Closes #${ISSUE_NUMBER}"
 
           # Assign to Copilot coding agent via REST API
           curl -s -X POST \
