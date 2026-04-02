@@ -76,9 +76,18 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Extract issue numbers from PR body (Closes #N)
-          PR_BODY=$(gh pr view "${{ steps.find-pr.outputs.number }}" --repo "${{ github.repository }}" --json body --jq '.body')
-          ISSUE_NUMBERS=$(echo "$PR_BODY" | grep -oiE '(closes|fixes|resolves) #[0-9]+' | grep -oE '[0-9]+')
+          PR_NUMBER="${{ steps.find-pr.outputs.number }}"
+
+          # Method 1: Extract from PR body (Closes #N)
+          PR_BODY=$(gh pr view "$PR_NUMBER" --repo "${{ github.repository }}" --json body --jq '.body')
+          ISSUE_NUMBERS=$(echo "$PR_BODY" | grep -oiE '(closes|fixes|resolves) #[0-9]+' | grep -oE '[0-9]+' || true)
+
+          # Method 2: Find open "Sync" issues assigned to Copilot
+          if [ -z "$ISSUE_NUMBERS" ]; then
+            ISSUE_NUMBERS=$(gh issue list --repo "${{ github.repository }}" \
+              --state open --search "Sync: Update skills/agents" \
+              --json number --jq '.[].number' || true)
+          fi
 
           for ISSUE in $ISSUE_NUMBERS; do
             echo "Closing issue #$ISSUE"
