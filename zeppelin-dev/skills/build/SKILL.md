@@ -33,7 +33,9 @@ tools:
 #   -Prat                              Apache RAT license check
 ```
 
-## Shaded JAR Rebuild Chain
+## Build Gotchas
+
+### Shaded JAR Rebuild Chain
 
 The most common build mistake: modifying `zeppelin-interpreter` without rebuilding `zeppelin-interpreter-shaded`. The shaded JAR is an uber JAR that all interpreter processes use. If it's stale, you get `ClassNotFoundException` or `NoSuchMethodError` at runtime.
 
@@ -49,7 +51,7 @@ The most common build mistake: modifying `zeppelin-interpreter` without rebuildi
 
 The shaded JAR is also copied to `interpreter/` directory by maven-antrun-plugin after packaging. If this directory has a stale JAR, interpreter processes will load old code.
 
-## Module Build Order
+### Module Build Order
 
 Maven modules are ordered in the root `pom.xml`. Key sequence:
 
