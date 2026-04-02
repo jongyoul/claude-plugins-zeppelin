@@ -61,6 +61,8 @@ jobs:
         run: |
           gh pr ready "${{ steps.find-pr.outputs.number }}" \
             --repo "${{ github.repository }}" 2>/dev/null || true
+          # Wait for GitHub to process the ready state
+          sleep 5
 
       - name: Squash merge
         if: steps.find-pr.outputs.found == 'true' && steps.diff.outputs.safe == 'true'
@@ -76,18 +78,10 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          PR_NUMBER="${{ steps.find-pr.outputs.number }}"
-
-          # Method 1: Extract from PR body (Closes #N)
-          PR_BODY=$(gh pr view "$PR_NUMBER" --repo "${{ github.repository }}" --json body --jq '.body')
-          ISSUE_NUMBERS=$(echo "$PR_BODY" | grep -oiE '(closes|fixes|resolves) #[0-9]+' | grep -oE '[0-9]+' || true)
-
-          # Method 2: Find open "Sync" issues assigned to Copilot
-          if [ -z "$ISSUE_NUMBERS" ]; then
-            ISSUE_NUMBERS=$(gh issue list --repo "${{ github.repository }}" \
-              --state open --search "Sync: Update skills/agents" \
-              --json number --jq '.[].number' || true)
-          fi
+          # Close all open Sync issues
+          ISSUE_NUMBERS=$(gh issue list --repo "${{ github.repository }}" \
+            --state open --search "Sync: Update skills/agents" \
+            --json number --jq '.[].number' || true)
 
           for ISSUE in $ISSUE_NUMBERS; do
             echo "Closing issue #$ISSUE"
