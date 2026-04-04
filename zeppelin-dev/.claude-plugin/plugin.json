@@ -5,10 +5,7 @@
   "author": {
     "name": "Jongyoul Lee"
   },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/jongyoul/claude-plugins-zeppelin.git"
-  },
+  "repository": "https://github.com/jongyoul/claude-plugins-zeppelin",
   "license": "Apache-2.0",
   "keywords": ["zeppelin", "apache", "development", "build", "contribution"]
 }
