@@ -20,8 +20,7 @@ jobs:
       - name: Fetch AGENTS.md from upstream
         id: fetch
         run: |
-          # TODO: Change back to apache/zeppelin/master after PR #5187 is merged
-          if ! curl -sf https://raw.githubusercontent.com/jongyoul/zeppelin/ZEPPELIN-6405-agents-md/AGENTS.md -o AGENTS.md.upstream; then
+          if ! curl -sf https://raw.githubusercontent.com/apache/zeppelin/master/AGENTS.md -o AGENTS.md.upstream; then
             echo "AGENTS.md not found on upstream"
             echo "found=false" >> $GITHUB_OUTPUT
           else
