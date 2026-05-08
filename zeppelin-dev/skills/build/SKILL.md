@@ -16,21 +16,22 @@ tools:
 # Full build (skip tests)
 ./mvnw clean package -DskipTests
 
-# Build single module
-./mvnw clean package -pl zeppelin-server -DskipTests
+# Build single module (--am builds required upstream modules)
+./mvnw clean package -pl zeppelin-server --am -DskipTests
 
 # Run module tests
-./mvnw test -pl zeppelin-zengine
+./mvnw test -pl zeppelin-interpreter --am
 
 # Run single test class/method
-./mvnw test -pl zeppelin-server -Dtest=NotebookServerTest
-./mvnw test -pl zeppelin-server -Dtest=NotebookServerTest#testMethod
+./mvnw test -pl zeppelin-server --am -Dtest=NotebookServerTest
+./mvnw test -pl zeppelin-server --am -Dtest=NotebookServerTest#testMethod
 
 # Common profiles
 #   -Pspark-3.5 -Pspark-scala-2.12   Spark version
 #   -Pflink-117                        Flink version
 #   -Pbuild-distr                      Full distribution
 #   -Prat                              Apache RAT license check
+#   -Pweb-classic                      Additionally builds the classic UI web module when specified
 ```
 
 ## Build Gotchas
@@ -56,7 +57,7 @@ The shaded JAR is also copied to `interpreter/` directory by maven-antrun-plugin
 Maven modules are ordered in the root `pom.xml`. Key sequence:
 
 ```
-zeppelin-interpreter → zeppelin-interpreter-shaded → zeppelin-zengine → zeppelin-server
+zeppelin-interpreter → zeppelin-interpreter-shaded → zeppelin-server
 ```
 
 All interpreter modules build after `zeppelin-interpreter-shaded`. A second shading chain exists for Jupyter:

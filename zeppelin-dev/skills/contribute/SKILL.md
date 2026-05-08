@@ -40,14 +40,21 @@ cd ..
 ## Development Workflow
 
 ```bash
-# Build only the module you're changing
-./mvnw clean package -pl zeppelin-server -DskipTests
+# Create a worktree for your feature branch
+git worktree add ../zeppelin-ZEPPELIN-XXXX -b ZEPPELIN-XXXX-description
+cd ../zeppelin-ZEPPELIN-XXXX
+
+# When done, clean up
+git worktree remove ../zeppelin-ZEPPELIN-XXXX
+
+# Build only the module you're changing (--am builds required upstream modules)
+./mvnw clean package -pl zeppelin-server --am -DskipTests
 
 # Run tests for your module
-./mvnw test -pl zeppelin-server
+./mvnw test -pl zeppelin-server --am
 
 # Run a specific test
-./mvnw test -pl zeppelin-server -Dtest=NotebookServerTest#testMethod
+./mvnw test -pl zeppelin-server --am -Dtest=NotebookServerTest#testMethod
 
 # Start the dev frontend (proxies API to localhost:8080)
 cd zeppelin-web-angular && npm start
@@ -83,7 +90,7 @@ For Spark or Flink work, add the version profile:
 
 - **Java**: Google Java Style (2-space indent). Checkstyle enforced — no tabs, LF line endings, newline at EOF
 - **Frontend**: ESLint + Prettier, auto-enforced via pre-commit hook (Husky + lint-staged)
-- **Testing**: JUnit 4 + Mockito (Java), Playwright (frontend E2E)
+- **Testing**: JUnit 5 (Jupiter) + Mockito (Java; a small number of legacy JUnit 4 tests still exist), Playwright (frontend E2E)
 - **Logging**: SLF4J + Log4j2
 - **License**: Apache License 2.0 — all new files need the ASF header
 
@@ -127,8 +134,7 @@ Key conventions:
 | If the code... | Put it in |
 |----------------|-----------|
 | Is a base interface/class that all interpreters need | `zeppelin-interpreter` |
-| Handles notebook state, interpreter lifecycle, scheduling, search | `zeppelin-zengine` |
-| Is a REST endpoint, WebSocket handler, or authentication realm | `zeppelin-server` |
+| Handles notebook state, interpreter lifecycle, scheduling, search, REST/WebSocket, or authentication realm | `zeppelin-server` |
 | Is specific to one backend (Spark, Flink, JDBC, etc.) | That interpreter's module |
 | Is a new way to launch interpreter processes | `zeppelin-plugins/launcher/` |
 | Is a new notebook storage backend | `zeppelin-plugins/notebookrepo/` |
