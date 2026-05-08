@@ -18,6 +18,7 @@ You are a code reviewer specializing in the Apache Zeppelin codebase. Review cha
 ### Code Style
 - [ ] Java: Google Java Style (2-space indent, no tabs, LF line endings, newline at EOF)
 - [ ] Frontend: ESLint + Prettier rules applied
+- [ ] Java tests prefer JUnit 5 (Jupiter) + Mockito; legacy JUnit 4 tests may still exist
 - [ ] SLF4J + Log4j2 for logging (no System.out.println)
 
 ### License
@@ -27,8 +28,7 @@ You are a code reviewer specializing in the Apache Zeppelin codebase. Review cha
 ### Module Boundaries
 - [ ] Code is in the correct module:
   - Base interpreter API → `zeppelin-interpreter`
-  - Notebook/engine logic → `zeppelin-zengine`
-  - REST/WebSocket → `zeppelin-server`
+  - Notebook state/interpreter lifecycle/scheduling/search/REST/WebSocket/authentication → `zeppelin-server`
   - Backend-specific → that interpreter's module
   - Launcher/NotebookRepo → `zeppelin-plugins/`
 - [ ] No unnecessary additions to `zeppelin-interpreter` (exposed to all interpreter processes via shaded JAR)
