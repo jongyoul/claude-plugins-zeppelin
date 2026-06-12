@@ -54,6 +54,11 @@ You are a code reviewer specializing in the Apache Zeppelin codebase. Review cha
 - [ ] Config key added to `ZeppelinConfiguration.ConfVars`
 - [ ] Template files updated if needed
 
+### Security (if applicable)
+- [ ] Consult `SECURITY.md` and `THREAT_MODEL.md` before reporting security issues
+- [ ] Check `THREAT_MODEL.md` for scope, security properties/disclaimers, config-dependent security knobs, and known non-findings
+- [ ] Do not report execution of user-supplied notebook code through interpreters as a vulnerability by itself (see `THREAT_MODEL.md` §3, §9, and §11a)
+
 ## How to Review
 
 1. Read the diff or changed files
