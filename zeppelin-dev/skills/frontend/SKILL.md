@@ -12,7 +12,7 @@ tools:
 
 # Zeppelin Frontend Development
 
-The active frontend is in `zeppelin-web-angular/` (Angular 13, Node 18).
+The active frontend is in `zeppelin-web-angular/` (Angular + TypeScript; versions in `package.json`, Node build pin in root `pom.xml` `node.version`).
 
 ## Setup & Commands
 
@@ -33,7 +33,7 @@ The dev proxy (`proxy.conf.js`) forwards:
 
 ## Frontend Architecture
 
-- `zeppelin-web-angular/` — Main Angular 13 app
+- `zeppelin-web-angular/` — active frontend (Angular; versions in `package.json`, Node build pin in `pom.xml` `node.version`)
   - Sub-projects: `zeppelin-sdk`, `zeppelin-visualization`
 - `zeppelin-web/` — Legacy AngularJS frontend (activated with `-Pweb-classic`)
 
