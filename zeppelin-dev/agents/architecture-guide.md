@@ -91,7 +91,6 @@ Each interpreter is an independent Maven module inheriting from `zeppelin-interp
 | `bigquery/` | Google BigQuery |
 | `cassandra/` | Apache Cassandra CQL |
 | `hbase/` | Apache HBase |
-| `rlang/` | R language |
 | `livy/` | Apache Livy (remote Spark) |
 | `sparql/` | SPARQL queries |
 | `influxdb/` | InfluxDB |
