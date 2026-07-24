@@ -36,8 +36,10 @@ Fetch the latest AGENTS.md from the Apache Zeppelin repository and generate a mi
 ## Project Overview
 
 Apache Zeppelin — web-based notebook for interactive data analytics.
-Java 11, Scala 2.12, Maven multi-module (wrapper: `./mvnw`), Angular 13 frontend.
-Version: 0.13.0-SNAPSHOT
+- **Language**: Java, Scala — versions in root `pom.xml` (`java.version`, `scala.binary.version`)
+- **Build**: Maven multi-module (wrapper: `./mvnw`)
+- **Frontend**: Angular + TypeScript in `zeppelin-web-angular/` — versions in its `package.json`
+- **Version**: see `<version>` in root `pom.xml`
 
 ## Quick Reference
 
