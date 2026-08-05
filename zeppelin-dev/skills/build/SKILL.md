@@ -63,7 +63,7 @@ zeppelin-interpreter → zeppelin-interpreter-shaded → zeppelin-server
 All interpreter modules build after `zeppelin-interpreter-shaded`. A second shading chain exists for Jupyter:
 
 ```
-zeppelin-jupyter-interpreter → zeppelin-jupyter-interpreter-shaded → python, rlang
+zeppelin-jupyter-interpreter → zeppelin-jupyter-interpreter-shaded → python
 ```
 
 ## Maven Profiles
